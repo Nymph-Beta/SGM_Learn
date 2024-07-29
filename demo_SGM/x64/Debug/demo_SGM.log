@@ -1,0 +1,3 @@
+﻿  SemiGlobalMatching.cpp
+demo_SGM\x64\Debug\SemiGlobalMatching.obj : warning LNK4042: 对象被多次指定；已忽略多余的指定
+  demo_SGM.vcxproj -> D:\Learn\C++\source\repos\demo_SGM\x64\Debug\demo_SGM.exe
