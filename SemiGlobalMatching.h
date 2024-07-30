@@ -85,7 +85,7 @@ private:
 	void ComputeCost() const;
 
 	/** \brief 代价聚合	 */
-	//void CostAggregation() const;
+	void CostAggregation() const;
 
 	/** \brief 视差计算	 */
 	void ComputeDisparity() const;

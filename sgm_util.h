@@ -21,6 +21,7 @@ namespace sgm_util
 	void CheckCensusTransform(const uint32* census, const sint32& width, const sint32& height);
 	void census_transform_5x5(const uint8* source, uint32* census, const sint32& width, const sint32& height);
 	void census_transform_9x7(const uint8* source, uint64* census, const sint32& width, const sint32& height);
+
 	// Hamming距离
 	uint8 Hamming32(const uint32& x, const uint32& y);
 	uint8 Hamming64(const uint64& x, const uint64& y);
@@ -38,8 +39,8 @@ namespace sgm_util
 	 * \param cost_aggr			输出，路径聚合代价数据
 	 * \param is_forward		输入，是否为正方向（正方向为从左到右，反方向为从右到左）
 	 */
-	//void CostAggregateLeftRight(const uint8* img_data, const sint32& width, const sint32& height, const sint32& min_disparity, const sint32& max_disparity,
-	//	const sint32& p1, const sint32& p2_init, const uint8* cost_init, uint8* cost_aggr, bool is_forward = true);
+	void CostAggregateLeftRight(const uint8* img_data, const sint32& width, const sint32& height, const sint32& min_disparity, const sint32& max_disparity,
+		const sint32& p1, const sint32& p2_init, const uint8* cost_init, uint8* cost_aggr, bool is_forward = true);
 
 	/**
 	 * \brief 上下路径聚合 ↓ ↑
@@ -54,8 +55,8 @@ namespace sgm_util
 	 * \param cost_aggr			输出，路径聚合代价数据
 	 * \param is_forward		输入，是否为正方向（正方向为从上到下，反方向为从下到上）
 	 */
-	//void CostAggregateUpDown(const uint8* img_data, const sint32& width, const sint32& height, const sint32& min_disparity, const sint32& max_disparity,
-	//	const sint32& p1, const sint32& p2_init, const uint8* cost_init, uint8* cost_aggr, bool is_forward = true);
+	void CostAggregateUpDown(const uint8* img_data, const sint32& width, const sint32& height, const sint32& min_disparity, const sint32& max_disparity,
+		const sint32& p1, const sint32& p2_init, const uint8* cost_init, uint8* cost_aggr, bool is_forward = true);
 
 	/**
 	 * \brief 对角线1路径聚合（左上<->右下）↘ ↖
@@ -70,8 +71,8 @@ namespace sgm_util
 	 * \param cost_aggr			输出，路径聚合代价数据
 	 * \param is_forward		输入，是否为正方向（正方向为从左上到右下，反方向为从右下到左上）
 	 */
-	//void CostAggregateDagonal_1(const uint8* img_data, const sint32& width, const sint32& height, const sint32& min_disparity, const sint32& max_disparity,
-	//	const sint32& p1, const sint32& p2_init, const uint8* cost_init, uint8* cost_aggr, bool is_forward = true);
+	void CostAggregateDagonal_1(const uint8* img_data, const sint32& width, const sint32& height, const sint32& min_disparity, const sint32& max_disparity,
+		const sint32& p1, const sint32& p2_init, const uint8* cost_init, uint8* cost_aggr, bool is_forward = true);
 
 	/**
 	 * \brief 对角线2路径聚合（右上<->左下）↙ ↗
@@ -86,8 +87,8 @@ namespace sgm_util
 	 * \param cost_aggr			输出，路径聚合代价数据
 	 * \param is_forward		输入，是否为正方向（正方向为从上到下，反方向为从下到上）
 	 */
-	//void CostAggregateDagonal_2(const uint8* img_data, const sint32& width, const sint32& height, const sint32& min_disparity, const sint32& max_disparity,
-	//	const sint32& p1, const sint32& p2_init, const uint8* cost_init, uint8* cost_aggr, bool is_forward = true);
+	void CostAggregateDagonal_2(const uint8* img_data, const sint32& width, const sint32& height, const sint32& min_disparity, const sint32& max_disparity,
+		const sint32& p1, const sint32& p2_init, const uint8* cost_init, uint8* cost_aggr, bool is_forward = true);
 
 
 	/**
