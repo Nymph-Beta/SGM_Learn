@@ -76,6 +76,7 @@ bool SemiGlobalMatching::Initialize(const sint32& width, const sint32& height, c
 
     // Disparity maps
     disp_left_ = new float32[width * height]();
+    disp_right_ = new float32[width * height]();
 
     is_initialized_ = census_left_ && census_right_ && cost_init_ && cost_aggr_ && disp_left_;
 
@@ -112,6 +113,14 @@ bool SemiGlobalMatching::Match(const uint8* img_left, const uint8* img_right, fl
         // 一致性检查
         LRCheck();
     }
+
+    // 移除小连通区
+    if (option_.is_remove_speckles) {
+        sgm_util::RemoveSpeckles(disp_left_, width_, height_, 1, option_.min_speckle_aera, Invalid_Float);
+    }
+
+    // 中值滤波
+    sgm_util::MedianFilter(disp_left_, disp_left_, width_, height_, 3);
 
     // Output disparity map
     memcpy(disp_left, disp_left_, width_ * height_ * sizeof(float32));
@@ -169,7 +178,60 @@ void SemiGlobalMatching::CensusTransform() const{
     // sgm_util::CheckCensusTransform(census_right_, width_, height_);
 }
 
+void SemiGlobalMatching::CostAggregation() const {
+    // 路径聚合
+    // 1、左->右/右->左
+    // 2、上->下/下->上
+    // 3、左上->右下/右下->左上
+    // 4、右上->左上/左下->右上
+    //
+    // ↘ ↓ ↙   5  3  7
+    // →    ←	 1    2
+    // ↗ ↑ ↖   8  4  6
+    //
 
+    std::cout << " CostAggregation strat " << std::endl;
+    const auto& min_disparity = option_.min_disparity;
+    const auto& max_disparity = option_.max_disparity;
+    assert(max_disparity > min_disparity);
+
+    const sint32 size = width_ * height_ * (max_disparity - min_disparity);
+    if (size <= 0) {
+        return;
+    }
+
+    const auto& P1 = option_.p1;
+    const auto& P2 = option_.p2_init;
+
+
+    std::cout << " CostAggregateLeftRight strat " << std::endl;
+    sgm_util::CostAggregateLeftRight(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_1_, true);
+    sgm_util::CostAggregateLeftRight(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_2_, false);
+
+    std::cout << " CostAggregateUpDown strat " << std::endl;
+    sgm_util::CostAggregateUpDown(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_3_, true);
+    sgm_util::CostAggregateUpDown(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_4_, false);
+
+    std::cout << " CostAggregateDagonal strat " << std::endl;
+    // 对角线1聚合
+    sgm_util::CostAggregateDagonal_1(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_5_, true);
+    sgm_util::CostAggregateDagonal_1(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_6_, false);
+    // 对角线2聚合
+    sgm_util::CostAggregateDagonal_2(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_7_, true);
+    sgm_util::CostAggregateDagonal_2(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_8_, false);
+
+    for (sint32 i = 0; i < size; i++) {
+        //std::cout << "cost_aggr_1_[i]: " << cost_aggr_1_[i] << std::endl;
+        //std::cout << "cost_aggr_2_[i]: " << cost_aggr_2_[i] << std::endl;
+        //std::cout << "cost_aggr_3_[i]: " << cost_aggr_3_[i] << std::endl;
+        //std::cout << "cost_aggr_4_[i]: " << cost_aggr_4_[i] << std::endl;
+        cost_aggr_[i] = cost_aggr_1_[i] + cost_aggr_2_[i] + cost_aggr_3_[i] + cost_aggr_4_[i];
+        if (option_.num_paths == 8) {
+            cost_aggr_[i] += cost_aggr_5_[i] + cost_aggr_6_[i] + cost_aggr_7_[i] + cost_aggr_8_[i];
+        }
+    }
+
+}
 
 void SemiGlobalMatching::ComputeCost() const{
     std::cout << "census_left: " << census_left_ << std::endl;
@@ -329,6 +391,13 @@ void SemiGlobalMatching::ComputeDisparityRight() const {
 
             // ---子像素拟合
             if (best_disparity == min_disparity || best_disparity == max_disparity - 1) {
+
+                //if (disparity == nullptr) {
+                //    std::cerr << "Error: disparity pointer is null!" << std::endl;
+                //    return;
+                //}
+
+
                 disparity[i * width + j] = Invalid_Float;
                 continue;
             }
@@ -409,60 +478,7 @@ void SemiGlobalMatching::LRCheck() {
     }
 }
 
-void SemiGlobalMatching::CostAggregation() const {
-    // 路径聚合
-    // 1、左->右/右->左
-    // 2、上->下/下->上
-    // 3、左上->右下/右下->左上
-    // 4、右上->左上/左下->右上
-    //
-    // ↘ ↓ ↙   5  3  7
-    // →    ←	 1    2
-    // ↗ ↑ ↖   8  4  6
-    //
 
-    std::cout << " CostAggregation strat " << std::endl;
-    const auto& min_disparity = option_.min_disparity;
-    const auto& max_disparity = option_.max_disparity;
-    assert(max_disparity > min_disparity);
-
-    const sint32 size = width_ * height_ * (max_disparity - min_disparity);
-    if (size <= 0) {
-        return;
-    }
-
-    const auto& P1 = option_.p1;
-    const auto& P2 = option_.p2_init;
-
-
-    std::cout << " CostAggregateLeftRight strat " << std::endl;
-    sgm_util::CostAggregateLeftRight(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_1_, true);
-    sgm_util::CostAggregateLeftRight(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_2_, false);
-
-    std::cout << " CostAggregateUpDown strat " << std::endl;
-    sgm_util::CostAggregateUpDown(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_3_, true);
-    sgm_util::CostAggregateUpDown(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_4_, false);
-
-    std::cout << " CostAggregateDagonal strat " << std::endl;
-    // 对角线1聚合
-    sgm_util::CostAggregateDagonal_1(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_5_, true);
-    sgm_util::CostAggregateDagonal_1(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_6_, false);
-    // 对角线2聚合
-    sgm_util::CostAggregateDagonal_2(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_7_, true);
-    sgm_util::CostAggregateDagonal_2(img_left_, width_, height_, min_disparity, max_disparity, P1, P2, cost_init_, cost_aggr_8_, false);
-
-    for (sint32 i = 0; i < size; i++) {
-        //std::cout << "cost_aggr_1_[i]: " << cost_aggr_1_[i] << std::endl;
-        //std::cout << "cost_aggr_2_[i]: " << cost_aggr_2_[i] << std::endl;
-        //std::cout << "cost_aggr_3_[i]: " << cost_aggr_3_[i] << std::endl;
-        //std::cout << "cost_aggr_4_[i]: " << cost_aggr_4_[i] << std::endl;
-        cost_aggr_[i] = cost_aggr_1_[i] + cost_aggr_2_[i] + cost_aggr_3_[i] + cost_aggr_4_[i];
-        if (option_.num_paths == 8) {
-            cost_aggr_[i] += cost_aggr_5_[i] + cost_aggr_6_[i] + cost_aggr_7_[i] + cost_aggr_8_[i];
-        }
-    }
-
-}
 
 /**
  * \brief Main function

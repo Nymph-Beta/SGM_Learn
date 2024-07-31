@@ -510,3 +510,98 @@ void sgm_util::CostAggregateDagonal_2(const uint8* img_data, const sint32& width
 	}
 }
 
+void sgm_util::RemoveSpeckles(float32* disparity_map, const sint32& width, const sint32& height,
+	const sint32& diff_insame, const uint32& min_speckle_aera, const float& invalid_val) {
+	assert(width > 0 && height > 0);
+	if (width < 0 || height < 0) {
+		return;
+	}
+
+	// 定义标记像素是否访问的数组
+	std::vector<bool> visited(uint32(width * height), false);
+	for (sint32 i = 0; i < height; i++) {
+		for (sint32 j = 0; j < width; j++) {
+			if (visited[i * width + j] || disparity_map[i * width + j] == invalid_val) {
+				// 跳过已访问的像素及无效像素
+				continue;
+			}
+
+			// 广度优先遍历，区域跟踪
+			// 把连通域面积小于阈值的区域视差全设为无效值
+			std::vector<std::pair<sint32, sint32>> vec;
+			vec.emplace_back(i, j);
+			visited[i * width + j] = true;
+			uint32 cur = 0;
+			uint32 next = 0;
+			do {
+				// 广度优先遍历区域跟踪	
+				next = vec.size();
+				for (uint32 k = cur; k < next; k++) {
+					const auto& pixel = vec[k];
+					const sint32 row = pixel.first;
+					const sint32 col = pixel.second;
+					const auto& disp_base = disparity_map[row * width + col];
+					// 8邻域遍历
+					for (int r = -1; r <= 1; r++) {
+						for (int c = -1; c <= 1; c++) {
+							if (r == 0 && c == 0) {
+								continue;
+							}
+							int rowr = row + r;
+							int colc = col + c;
+							if (rowr >= 0 && rowr < height && colc >= 0 && colc < width) {
+								if (!visited[rowr * width + colc] && abs(disparity_map[rowr * width + colc] - disp_base) <= diff_insame) {
+									vec.emplace_back(rowr, colc);
+									visited[rowr * width + colc] = true;
+								}
+							}
+						}
+					}
+				}
+				cur = next;
+			} while (next < vec.size());
+
+			// 把连通域面积小于阈值的区域视差全设为无效值
+			if (vec.size() < min_speckle_aera) {
+				for (auto& pix : vec) {
+					disparity_map[pix.first * width + pix.second] = invalid_val;
+				}
+			}
+		}
+	}
+}
+
+void sgm_util::MedianFilter(const float32* in, float32* out, const sint32& width, const sint32& height,
+	const sint32 wnd_size)
+{
+	const sint32 radius = wnd_size / 2;
+	const sint32 size = wnd_size * wnd_size;
+
+	// 存储局部窗口内的数据
+	std::vector<float32> wnd_data;
+	wnd_data.reserve(size);
+
+	for (sint32 i = 0; i < height; i++) {
+		for (sint32 j = 0; j < width; j++) {
+			wnd_data.clear();
+
+			// 获取局部窗口数据
+			for (sint32 r = -radius; r <= radius; r++) {
+				for (sint32 c = -radius; c <= radius; c++) {
+					const sint32 row = i + r;
+					const sint32 col = j + c;
+					if (row >= 0 && row < height && col >= 0 && col < width) {
+						wnd_data.push_back(in[row * width + col]);
+					}
+				}
+			}
+
+			// 排序
+			std::sort(wnd_data.begin(), wnd_data.end());
+
+			// 取中值
+			out[i * width + j] = wnd_data[wnd_data.size() / 2];
+		}
+	}
+}
+
