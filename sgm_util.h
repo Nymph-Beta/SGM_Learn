@@ -99,7 +99,7 @@ namespace sgm_util
 	 * \param height			输入，高度
 	 * \param wnd_size			输入，窗口宽度
 	 */
-	//void MedianFilter(const float32* in, float32* out, const sint32& width, const sint32& height, const sint32 wnd_size);
+	void MedianFilter(const float32* in, float32* out, const sint32& width, const sint32& height, const sint32 wnd_size);
 
 
 	/**
@@ -111,5 +111,5 @@ namespace sgm_util
 	 * \param min_speckle_aera	输入，最小连通区面积
 	 * \param invalid_val		输入，无效值
 	 */
-	//void RemoveSpeckles(float32* disparity_map, const sint32& width, const sint32& height, const sint32& diff_insame, const uint32& min_speckle_aera, const float32& invalid_val);
+	void RemoveSpeckles(float32* disparity_map, const sint32& width, const sint32& height, const sint32& diff_insame, const uint32& min_speckle_aera, const float32& invalid_val);
 }

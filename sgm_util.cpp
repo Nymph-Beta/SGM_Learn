@@ -96,37 +96,50 @@ void sgm_util::CostAggregateLeftRight(const uint8* img_data, const sint32& width
 	// Compute the disparity range
 	const sint32 disp_range = max_disparity - min_disparity ;	
 
+	// 引用传递 P1 和 P2 初始化的惩罚参数，用于路径代价的计算
 	const auto& P1 = p1;
 	const auto& P2 = p2_init;
 
+	// 确定遍历方向 如果 is_forward 为 true，则方向为 1（从左到右），否则为 -1（从右到左）
 	const sint32 direction = is_forward ? 1 : -1;
 
+	// 开始聚合，遍历图像每一行
 	for (sint32 i = 0u; i < height; i++) {
+
+		// // 根据方向计算当前行的初始代价和聚合代价的起始位置
 		//auto* cost_aggr_row = cost_aggr + i * width * disp_range;
 		auto cost_init_row = (is_forward) ? cost_init + i * width * disp_range : cost_init + i * width * disp_range + (width - 1) * disp_range;
 		auto cost_aggr_row = (is_forward) ? cost_aggr + i * width * disp_range : cost_aggr + i * width * disp_range + (width - 1) * disp_range;
 		auto img_row = (is_forward) ? img_data + i * width : img_data + i * width + (width - 1);
 
+		// 获取当前像素的灰度值
 		uint8 gray = *img_row;
-		uint8 gray_last = *img_row;
+		uint8 gray_last = *img_row; // 初始化上一个像素的灰度值
 
+		// 初始化上一路径的代价数组，大小为 disp_range + 2，初始值为 UINT8_MAX（无穷大）
 		std::vector<uint8>cost_last_path(disp_range + 2, UINT8_MAX);
 
+		// 复制当前行的初始代价到聚合代价数组中
 		memcpy(cost_aggr_row, cost_init_row, disp_range * sizeof(uint8));
-		//memcpy(cost_last_path.data() + 1, cost_aggr_row, disp_range * sizeof(uint8));
+		// memcpy(cost_last_path.data() + 1, cost_aggr_row, disp_range * sizeof(uint8));
+		// 复制当前聚合代价到上一路径的代价数组中（从索引 1 开始）
 		memcpy(&cost_last_path[1], cost_aggr_row, disp_range * sizeof(uint8));
+
+		// 更新指针以指向下一个像素
 		cost_init_row += direction* disp_range;
 		cost_aggr_row += direction* disp_range;
 		img_row += direction;
 
+		// 计算当前路径上最小的代价，用于后续计算
 		uint8 mincost_last_path = UINT8_MAX;
 		for(auto cost : cost_last_path)
 			mincost_last_path = std::min(mincost_last_path, cost);
 
+		// 遍历当前行的每个像素
 		for (sint32 j = 0; j < width - 1; j++) {
-			gray = *img_row;
-			uint8 min_cost = UINT8_MAX;
-			const sint32 disp_offset = j * disp_range;
+			gray = *img_row; // 获取当前像素的灰度值
+			uint8 min_cost = UINT8_MAX; // 初始化当前像素的最小代价
+			const sint32 disp_offset = j * disp_range; // 计算视差偏移量
 
 			// Compute the cost of the first disparity
 			//cost_aggr_row[0] = std::min(cost_aggr_row[0], static_cast<uint8>(cost_last_path[0] + P1));
@@ -138,25 +151,30 @@ void sgm_util::CostAggregateLeftRight(const uint8* img_data, const sint32& width
 				//cost_aggr_row[d] = std::min(cost_aggr_row[d], static_cast<uint8>(cost_min + P1));
 				//cost_aggr_row[d] = std::min(cost_aggr_row[d], static_cast<uint8>(cost_last_path[d] + P2));
 				//cost_aggr_row[d] = std::min(cost_aggr_row[d], static_cast<uint8>(cost_last_path[d + 2] + P2));
-				const uint8 cost = cost_init_row[d];
-				const uint16 l1 = cost_last_path[d + 1];
-				const uint16 l2 = cost_last_path[d] + P1;
-				const uint16 l3 = cost_last_path[d + 2] + P1;
-				const uint16 l4 = mincost_last_path + std::max(P1, P2 / (abs(gray - gray_last) + 1));
+				
+				// Lr(p,d) = C(p,d) + min( Lr(p-r,d), Lr(p-r,d-1) + P1, Lr(p-r,d+1) + P1, min(Lr(p-r))+P2 ) - min(Lr(p-r))
+				const uint8 cost = cost_init_row[d]; // 当前视差的初始代价
+				const uint16 l1 = cost_last_path[d + 1]; // 上一视差的代价
+				const uint16 l2 = cost_last_path[d] + P1; // 下一视差的代价加惩罚项 P1
+				const uint16 l3 = cost_last_path[d + 2] + P1; // 下一视差的代价加惩罚项 P1
+				const uint16 l4 = mincost_last_path + std::max(P1, P2 / (abs(gray - gray_last) + 1)); // 最小代价加动态惩罚项
 
+				// 计算当前视差的聚合代价
 				const uint8 cost_s = cost + static_cast<uint8>(std::min(std::min(l1, l2), std::min(l3, l4)) - mincost_last_path);
 
+				// 更新聚合代价数组和当前像素的最小代价
 				cost_aggr_row[d] = cost_s;
 				min_cost = std::min(min_cost, cost_s);
 			}
 
 			// Update the last path cost
-			//cost_last_path[0] = cost_aggr_row[0];
-			//for (sint32 d = 1; d < disp_range + 1; d++) {
-			//	cost_last_path[d] = cost_aggr_row[d];
-			//}
-
+			// cost_last_path[0] = cost_aggr_row[0];
+			// for (sint32 d = 1; d < disp_range + 1; d++) {
+			//	 cost_last_path[d] = cost_aggr_row[d];
+			// 
+			// 更新上一路径的最小代价
 			mincost_last_path = min_cost;
+			// 复制当前聚合代价到上一路径的代价数组中（从索引 1 开始）
 			memcpy(&cost_last_path[1], cost_aggr_row, disp_range * sizeof(uint8));
 
 			// Update the pointers
@@ -188,12 +206,8 @@ void sgm_util::CostAggregateUpDown(const uint8* img_data, const sint32& width, c
 	const sint32 direction = is_forward ? 1 : -1;
 
 	for (sint32 j = 0u; j < width; j++) {
-		//auto* cost_aggr_row = cost_aggr + i * width * disp_range;
-		//auto cost_init_col = (is_forward) ? cost_init + j * width * disp_range : cost_init + j * width * disp_range + (width - 1) * disp_range;
-		//auto cost_aggr_col = (is_forward) ? cost_aggr + j * width * disp_range : cost_aggr + j * width * disp_range + (width - 1) * disp_range;
 		auto cost_init_col = (is_forward) ? (cost_init + j * disp_range) : (cost_init + (height - 1) * width * disp_range + j * disp_range);
 		auto cost_aggr_col = (is_forward) ? (cost_aggr + j * disp_range) : (cost_aggr + (height - 1) * width * disp_range + j * disp_range);
-		//auto img_col = (is_forward) ? img_data + j * width : img_data + j * width + (width - 1);
 		auto img_col = (is_forward) ? (img_data + j) : (img_data + (height - 1) * width + j);
 
 		uint8 gray = *img_col;
@@ -219,10 +233,6 @@ void sgm_util::CostAggregateUpDown(const uint8* img_data, const sint32& width, c
 
 			// Compute the cost of the remaining disparities
 			for (sint32 d = 0; d < disp_range; d++) {
-				//const sint32 cost_min = std::min(cost_last_path[d + 1], cost_last_path[d + 2]);
-				//cost_aggr_row[d] = std::min(cost_aggr_row[d], static_cast<uint8>(cost_min + P1));
-				//cost_aggr_row[d] = std::min(cost_aggr_row[d], static_cast<uint8>(cost_last_path[d] + P2));
-				//cost_aggr_row[d] = std::min(cost_aggr_row[d], static_cast<uint8>(cost_last_path[d + 2] + P2));
 				const uint8 cost = cost_init_col[d];
 				const uint16 l1 = cost_last_path[d + 1];
 				const uint16 l2 = cost_last_path[d] + P1;
@@ -234,12 +244,6 @@ void sgm_util::CostAggregateUpDown(const uint8* img_data, const sint32& width, c
 				cost_aggr_col[d] = cost_s;
 				min_cost = std::min(min_cost, cost_s);
 			}
-
-			// Update the last path cost
-			//cost_last_path[0] = cost_aggr_row[0];
-			//for (sint32 d = 1; d < disp_range + 1; d++) {
-			//	cost_last_path[d] = cost_aggr_row[d];
-			//}
 
 			mincost_last_path = min_cost;
 			memcpy(&cost_last_path[1], cost_aggr_col, disp_range * sizeof(uint8));
@@ -505,3 +509,4 @@ void sgm_util::CostAggregateDagonal_2(const uint8* img_data, const sint32& width
 		}
 	}
 }
+
