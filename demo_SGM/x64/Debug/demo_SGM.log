@@ -1,2 +1,7 @@
 ﻿  SemiGlobalMatching.cpp
+D:\Learn\C++\source\repos\demo_SGM\SemiGlobalMatching.cpp(494,16): warning C4305: “初始化”: 从“double”到“float32”截断
+D:\Learn\C++\source\repos\demo_SGM\SemiGlobalMatching.cpp(533,41): warning C4244: “初始化”: 从“float32”转换到“sint32”，可能丢失数据
+D:\Learn\C++\source\repos\demo_SGM\SemiGlobalMatching.cpp(533,37): warning C4244: “初始化”: 从“float32”转换到“const sint32”，可能丢失数据
+D:\Learn\C++\source\repos\demo_SGM\SemiGlobalMatching.cpp(534,41): warning C4244: “初始化”: 从“float32”转换到“sint32”，可能丢失数据
+D:\Learn\C++\source\repos\demo_SGM\SemiGlobalMatching.cpp(534,37): warning C4244: “初始化”: 从“float32”转换到“const sint32”，可能丢失数据
   demo_SGM.vcxproj -> D:\Learn\C++\source\repos\demo_SGM\x64\Debug\demo_SGM.exe

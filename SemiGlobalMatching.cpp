@@ -119,6 +119,11 @@ bool SemiGlobalMatching::Match(const uint8* img_left, const uint8* img_right, fl
         sgm_util::RemoveSpeckles(disp_left_, width_, height_, 1, option_.min_speckle_aera, Invalid_Float);
     }
 
+    // 视差填充
+    if (option_.is_fill_holes) {
+        FillHolesInDispMap();
+    }
+
     // 中值滤波
     sgm_util::MedianFilter(disp_left_, disp_left_, width_, height_, 3);
 
@@ -478,6 +483,87 @@ void SemiGlobalMatching::LRCheck() {
     }
 }
 
+void SemiGlobalMatching::FillHolesInDispMap()
+{
+    const sint32 width = width_;
+    const sint32 height = height_;
+
+    std::vector<float32> disp_collects;
+
+    // 定义8个方向
+    float32 pi = 3.1415926;
+    float32 angle1[8] = { pi, 3 * pi / 4, pi / 2, pi / 4, 0, 7 * pi / 4, 3 * pi / 2, 5 * pi / 4 };
+    float32 angle2[8] = { pi, 5 * pi / 4, 3 * pi / 2, 7 * pi / 4, 0, pi / 4, pi / 2, 3 * pi / 4 };
+    float32* angle = angle1;
+
+    float32* disp_ptr = disp_left_;
+    for (int k = 0; k < 3; k++) {
+        // 第一次循环处理遮挡区，第二次循环处理误匹配区
+        auto& trg_pixels = (k == 0) ? occlusions_ : mismatches_;
+
+        std::vector<std::pair<int, int>> inv_pixels;
+        if (k == 2) {
+            //  第三次循环处理前两次没有处理干净的像素
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    if (disp_ptr[i * width + j] == Invalid_Float) {
+                        inv_pixels.emplace_back(i, j);
+                    }
+                }
+            }
+            trg_pixels = inv_pixels;
+        }
+
+        // 遍历待处理像素
+        for (auto& pix : trg_pixels) {
+            int y = pix.first;
+            int x = pix.second;
+
+            if (y == height / 2) {
+                angle = angle2;
+            }
+
+            // 收集8个方向上遇到的首个有效视差值
+            disp_collects.clear();
+            for (sint32 n = 0; n < 8; n++) {
+                const float32 ang = angle[n];
+                const float32 sina = sin(ang);
+                const float32 cosa = cos(ang);
+                for (sint32 n = 1; ; n++) {
+                    const sint32 yy = y + n * sina;
+                    const sint32 xx = x + n * cosa;
+                    if (yy < 0 || yy >= height || xx < 0 || xx >= width) {
+                        break;
+                    }
+                    auto& disp = *(disp_ptr + yy * width + xx);
+                    if (disp != Invalid_Float) {
+                        disp_collects.push_back(disp);
+                        break;
+                    }
+                }
+            }
+            if (disp_collects.empty()) {
+                continue;
+            }
+
+            std::sort(disp_collects.begin(), disp_collects.end());
+
+            // 如果是遮挡区，则选择第二小的视差值
+            // 如果是误匹配区，则选择中值
+            if (k == 0) {
+                if (disp_collects.size() > 1) {
+                    disp_ptr[y * width + x] = disp_collects[1];
+                }
+                else {
+                    disp_ptr[y * width + x] = disp_collects[0];
+                }
+            }
+            else {
+                disp_ptr[y * width + x] = disp_collects[disp_collects.size() / 2];
+            }
+        }
+    }
+}
 
 
 /**

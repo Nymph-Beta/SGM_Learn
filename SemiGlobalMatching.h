@@ -102,7 +102,7 @@ private:
 	/** \brief ÄÚ´æÊÍ·Å	 */
 	void Release();
 
-	void CheckImageData() const;
+	//void CheckImageData() const;
 	
 
 private:
