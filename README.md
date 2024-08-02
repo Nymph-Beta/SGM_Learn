@@ -214,6 +214,8 @@ D'_p =
 D_p & \text{otherwise.}
 \end{cases}
 $$
+![Dp_select](./docs/dp_select.svg)
+
 
 以像素为中心，等角度往外发射 8 条射线，收集每条射线碰到的第一个有效像素就为有效像素。
 
