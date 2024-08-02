@@ -206,14 +206,6 @@ $$
 对于误匹配像素，它并不位于遮挡区，所以周围的像素都是可见的，而且没有遮挡导致的视差非连续的情况，它就像一个连续的表面凸起的一小块噪声，这时周围的视差值都是等价的，没有哪个应选哪个不应选，这时取中值就很适合。
 即：
 
-$$
-D'_p = 
-\begin{cases} 
-\text{seclow}_i v_{pi} & \text{if } \mathbf{p} \text{ is occluded,} \\
-\text{med}_i v_{pi} & \text{if } \mathbf{p} \text{ is mismatched,} \\
-D_p & \text{otherwise.}
-\end{cases}
-$$
 ![Dp_select](./docs/dp_select.svg)
 
 
