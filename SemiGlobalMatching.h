@@ -1,11 +1,10 @@
-
 #pragma once
 
 #include "sgm_types.h"
 #include <vector>
 
 /**
- * \brief SemiGlobalMatching类（General implementation of Semi-Global Matching）
+ * \brief SemiGlobalMatching class (General implementation of Semi-Global Matching)
  */
 class SemiGlobalMatching
 {
@@ -22,27 +21,27 @@ public:
 
 	/** \brief SGM parameters structure */
 	struct SGMOption {
-		uint8	num_paths;			// 聚合路径数 4 and 8
-		sint32  min_disparity;		// 最小视差
-		sint32	max_disparity;		// 最大视差
+		uint8	num_paths;			// Number of aggregation paths, 4 and 8
+		sint32  min_disparity;		// Minimum disparity
+		sint32	max_disparity;		// Maximum disparity
 
-		CensusSize census_size;		// census窗口尺寸
+		CensusSize census_size;		// Census window size
 
-		bool	is_check_unique;	// 是否检查唯一性
-		float32	uniqueness_ratio;	// 唯一性约束阈值 （最小代价-次最小代价)/最小代价 > 阈值 为有效像素
+		bool	is_check_unique;	// Whether to check uniqueness
+		float32	uniqueness_ratio;	// Uniqueness constraint threshold (minimum cost - second minimum cost) / minimum cost > threshold is considered valid pixel
 
-		bool	is_check_lr;		// 是否检查左右一致性
-		float32	lrcheck_thres;		// 左右一致性约束阈值
+		bool	is_check_lr;		// Whether to check left-right consistency
+		float32	lrcheck_thres;		// Left-right consistency constraint threshold
 
-		bool	is_remove_speckles;	// 是否移除小的连通区
-		int		min_speckle_aera;	// 最小的连通区面积（像素数）
+		bool	is_remove_speckles;	// Whether to remove small connected regions
+		int		min_speckle_aera;	// Minimum connected region area (number of pixels)
 
-		bool	is_fill_holes;		// 是否填充视差空洞
+		bool	is_fill_holes;		// Whether to fill disparity holes
 
 		// P1,P2 
 		// P2 = P2_init / (Ip-Iq)
-		sint32  p1;				// 惩罚项参数P1
-		sint32  p2_init;		// 惩罚项参数P2
+		sint32  p1;				// Penalty parameter P1
+		sint32  p2_init;		// Penalty parameter P2
 
 		SGMOption() : num_paths(8), min_disparity(0), max_disparity(64), census_size(Census5x5),
 			is_check_unique(true), uniqueness_ratio(0.95f),
@@ -53,119 +52,113 @@ public:
 	};
 public:
 	/**
-	 * \brief Initialize the class, pre-allocate memory, set parameters, etc.
-	 * \param width		Input, width of the rectified stereo image
-	 * \param height	Input, height of the rectified stereo image
-	 * \param option	Input, SemiGlobalMatching parameters
-	 */
+  * \brief Initialize the class, pre-allocate memory, set parameters, etc.
+  * \param width		Input, width of the rectified stereo image
+  * \param height		Input, height of the rectified stereo image
+  * \param option		Input, SemiGlobalMatching parameters
+  */
 	bool Initialize(const sint32& width, const sint32& height, const SGMOption& option);
 
 	/**
-	 * \brief Perform matching
-	 * \param img_left	Input, pointer to the left image data
-	 * \param img_right	Input, pointer to the right image data
-	 * \param disp_left	Output, pointer to the disparity map of the left image, pre-allocated with the same size as the images
-	 */
+  * \brief Perform matching
+  * \param img_left		Input, pointer to the left image data
+  * \param img_right	Input, pointer to the right image data
+  * \param disp_left	Output, pointer to the disparity map of the left image, pre-allocated with the same size as the images
+  */
 	bool Match(const uint8* img_left, const uint8* img_right, float32* disp_left);
 
 	/**
-	 * \brief Reset
-	 * \param width		Input, width of the rectified stereo image
-	 * \param height	Input, height of the rectified stereo image
-	 * \param option	Input, SemiGlobalMatching parameters
-	 */
+  * \brief Reset
+  * \param width		Input, width of the rectified stereo image
+  * \param height		Input, height of the rectified stereo image
+  * \param option		Input, SemiGlobalMatching parameters
+  */
 	bool Reset(const uint32& width, const uint32& height, const SGMOption& option);
 
 private:
 
-	/** \brief Census变换 */
+	/** \brief Census transform */
 	void CensusTransform() const;
 
-	/** \brief 代价计算	 */
+	/** \brief Cost computation */
 	void ComputeCost() const;
 
-	/** \brief 代价聚合	 */
+	/** \brief Cost aggregation */
 	void CostAggregation() const;
 
-	/** \brief 视差计算	 */
+	/** \brief Disparity computation */
 	void ComputeDisparity() const;
 
-	/** \brief 视差计算	 */
+	/** \brief Disparity computation (right image) */
 	void ComputeDisparityRight() const;
 
-	/** \brief 一致性检查	 */
+	/** \brief Left-right consistency check */
 	void LRCheck();
 
-	/** \brief 视差图填充 */
+	/** \brief Fill holes in disparity map */
 	void FillHolesInDispMap();
 
-	/** \brief 内存释放	 */
+	/** \brief Memory release */
 	void Release();
 
-	//void CheckImageData() const;
-	
-
 private:
-	/** \brief SGM参数	 */
+	/** \brief SGM parameters */
 	SGMOption option_;
 
-	/** \brief 影像宽	 */
+	/** \brief Image width */
 	sint32 width_;
 
-	/** \brief 影像高	 */
+	/** \brief Image height */
 	sint32 height_;
 
-	/** \brief 左影像数据	 */
+	/** \brief Left image data */
 	const uint8* img_left_;
 
-	/** \brief 右影像数据	 */
+	/** \brief Right image data */
 	const uint8* img_right_;
 
-	/** \brief 左影像census值	*/
-	//void* census_left_;
+	/** \brief Left image census values */
 	uint32* census_left_;
 
-	/** \brief 右影像census值	*/
-	//void* census_right_;
+	/** \brief Right image census values */
 	uint32 * census_right_;
 
-	/** \brief 初始匹配代价	*/
+	/** \brief Initial matching cost */
 	uint8* cost_init_;
 
-	/** \brief 聚合匹配代价	*/
+	/** \brief Aggregated matching cost */
 	uint16* cost_aggr_;
 
 	// ↘ ↓ ↙   5  3  7
 	// →    ←	 1    2
 	// ↗ ↑ ↖   8  4  6
-	/** \brief 聚合匹配代价-方向1	*/
+	/** \brief Aggregated matching cost - direction 1 */
 	uint8* cost_aggr_1_;
-	/** \brief 聚合匹配代价-方向2	*/
+	/** \brief Aggregated matching cost - direction 2 */
 	uint8* cost_aggr_2_;
-	/** \brief 聚合匹配代价-方向3	*/
+	/** \brief Aggregated matching cost - direction 3 */
 	uint8* cost_aggr_3_;
-	/** \brief 聚合匹配代价-方向4	*/
+	/** \brief Aggregated matching cost - direction 4 */
 	uint8* cost_aggr_4_;
-	/** \brief 聚合匹配代价-方向5	*/
+	/** \brief Aggregated matching cost - direction 5 */
 	uint8* cost_aggr_5_;
-	/** \brief 聚合匹配代价-方向6	*/
+	/** \brief Aggregated matching cost - direction 6 */
 	uint8* cost_aggr_6_;
-	/** \brief 聚合匹配代价-方向7	*/
+	/** \brief Aggregated matching cost - direction 7 */
 	uint8* cost_aggr_7_;
-	/** \brief 聚合匹配代价-方向8	*/
+	/** \brief Aggregated matching cost - direction 8 */
 	uint8* cost_aggr_8_;
 
-	/** \brief 左影像视差图	*/
+	/** \brief Left image disparity map */
 	float32* disp_left_;
-	/** \brief 右影像视差图	*/
+	/** \brief Right image disparity map */
 	float32* disp_right_;
 
-	/** \brief 是否初始化标志	*/
+	/** \brief Initialization flag */
 	bool is_initialized_;
 
-	/** \brief 遮挡区像素集	*/
+	/** \brief Occlusion pixel set */
 	std::vector<std::pair<int, int>> occlusions_;
-	/** \brief 误匹配区像素集	*/
+	/** \brief Mismatch pixel set */
 	std::vector<std::pair<int, int>> mismatches_;
 };
-

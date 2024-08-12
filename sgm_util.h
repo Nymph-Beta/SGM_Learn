@@ -1,4 +1,3 @@
-
 #pragma once
 #include "sgm_types.h"
 
@@ -8,108 +7,108 @@
 
 namespace sgm_util
 {
-	//······ census工具集
-	// census变换
+	//······ Census toolkit
+	// Census transform
 
 	/**
-	 * \brief census变换
-	 * \param source	输入，影像数据
-	 * \param census	输出，census值数组
-	 * \param width		输入，影像宽
-	 * \param height	输入，影像高
-	 */
+  * \brief Census transform
+  * \param source	Input, image data
+  * \param census	Output, census value array
+  * \param width	Input, image width
+  * \param height	Input, image height
+  */
 	void CheckCensusTransform(const uint32* census, const sint32& width, const sint32& height);
 	void census_transform_5x5(const uint8* source, uint32* census, const sint32& width, const sint32& height);
 	void census_transform_9x7(const uint8* source, uint64* census, const sint32& width, const sint32& height);
 
-	// Hamming距离
+	// Hamming distance
 	uint8 Hamming32(const uint32& x, const uint32& y);
 	uint8 Hamming64(const uint64& x, const uint64& y);
 
 	/**
-	 * \brief 左右路径聚合 → ←
-	 * \param img_data			输入，影像数据
-	 * \param width				输入，影像宽
-	 * \param height			输入，影像高
-	 * \param min_disparity		输入，最小视差
-	 * \param max_disparity		输入，最大视差
-	 * \param p1				输入，惩罚项P1
-	 * \param p2_init			输入，惩罚项P2_Init
-	 * \param cost_init			输入，初始代价数据
-	 * \param cost_aggr			输出，路径聚合代价数据
-	 * \param is_forward		输入，是否为正方向（正方向为从左到右，反方向为从右到左）
-	 */
+  * \brief Cost aggregation from left to right → ←
+  * \param img_data			Input, image data
+  * \param width			Input, image width
+  * \param height			Input, image height
+  * \param min_disparity	Input, minimum disparity
+  * \param max_disparity	Input, maximum disparity
+  * \param p1				Input, penalty term P1
+  * \param p2_init			Input, penalty term P2_Init
+  * \param cost_init		Input, initial cost data
+  * \param cost_aggr		Output, cost aggregation data
+  * \param is_forward		Input, whether it is in the forward direction (forward direction is from left to right, reverse direction is from right to left)
+  */
 	void CostAggregateLeftRight(const uint8* img_data, const sint32& width, const sint32& height, const sint32& min_disparity, const sint32& max_disparity,
 		const sint32& p1, const sint32& p2_init, const uint8* cost_init, uint8* cost_aggr, bool is_forward = true);
 
 	/**
-	 * \brief 上下路径聚合 ↓ ↑
-	 * \param img_data			输入，影像数据
-	 * \param width				输入，影像宽
-	 * \param height			输入，影像高
-	 * \param min_disparity		输入，最小视差
-	 * \param max_disparity		输入，最大视差
-	 * \param p1				输入，惩罚项P1
-	 * \param p2_init			输入，惩罚项P2_Init
-	 * \param cost_init			输入，初始代价数据
-	 * \param cost_aggr			输出，路径聚合代价数据
-	 * \param is_forward		输入，是否为正方向（正方向为从上到下，反方向为从下到上）
-	 */
+  * \brief Cost aggregation from top to bottom ↓ ↑
+  * \param img_data			Input, image data
+  * \param width			Input, image width
+  * \param height			Input, image height
+  * \param min_disparity	Input, minimum disparity
+  * \param max_disparity	Input, maximum disparity
+  * \param p1				Input, penalty term P1
+  * \param p2_init			Input, penalty term P2_Init
+  * \param cost_init		Input, initial cost data
+  * \param cost_aggr		Output, cost aggregation data
+  * \param is_forward		Input, whether it is in the forward direction (forward direction is from top to bottom, reverse direction is from bottom to top)
+  */
 	void CostAggregateUpDown(const uint8* img_data, const sint32& width, const sint32& height, const sint32& min_disparity, const sint32& max_disparity,
 		const sint32& p1, const sint32& p2_init, const uint8* cost_init, uint8* cost_aggr, bool is_forward = true);
 
 	/**
-	 * \brief 对角线1路径聚合（左上<->右下）↘ ↖
-	 * \param img_data			输入，影像数据
-	 * \param width				输入，影像宽
-	 * \param height			输入，影像高
-	 * \param min_disparity		输入，最小视差
-	 * \param max_disparity		输入，最大视差
-	 * \param p1				输入，惩罚项P1
-	 * \param p2_init			输入，惩罚项P2_Init
-	 * \param cost_init			输入，初始代价数据
-	 * \param cost_aggr			输出，路径聚合代价数据
-	 * \param is_forward		输入，是否为正方向（正方向为从左上到右下，反方向为从右下到左上）
-	 */
+  * \brief Cost aggregation along diagonal 1 (top-left <-> bottom-right) ↘ ↖
+  * \param img_data			Input, image data
+  * \param width			Input, image width
+  * \param height			Input, image height
+  * \param min_disparity	Input, minimum disparity
+  * \param max_disparity	Input, maximum disparity
+  * \param p1				Input, penalty term P1
+  * \param p2_init			Input, penalty term P2_Init
+  * \param cost_init		Input, initial cost data
+  * \param cost_aggr		Output, cost aggregation data
+  * \param is_forward		Input, whether it is in the forward direction (forward direction is from top-left to bottom-right, reverse direction is from bottom-right to top-left)
+  */
 	void CostAggregateDagonal_1(const uint8* img_data, const sint32& width, const sint32& height, const sint32& min_disparity, const sint32& max_disparity,
 		const sint32& p1, const sint32& p2_init, const uint8* cost_init, uint8* cost_aggr, bool is_forward = true);
 
 	/**
-	 * \brief 对角线2路径聚合（右上<->左下）↙ ↗
-	 * \param img_data			输入，影像数据
-	 * \param width				输入，影像宽
-	 * \param height			输入，影像高
-	 * \param min_disparity		输入，最小视差
-	 * \param max_disparity		输入，最大视差
-	 * \param p1				输入，惩罚项P1
-	 * \param p2_init			输入，惩罚项P2_Init
-	 * \param cost_init			输入，初始代价数据
-	 * \param cost_aggr			输出，路径聚合代价数据
-	 * \param is_forward		输入，是否为正方向（正方向为从上到下，反方向为从下到上）
-	 */
+  * \brief Cost aggregation along diagonal 2 (top-right <-> bottom-left) ↙ ↗
+  * \param img_data			Input, image data
+  * \param width			Input, image width
+  * \param height			Input, image height
+  * \param min_disparity	Input, minimum disparity
+  * \param max_disparity	Input, maximum disparity
+  * \param p1				Input, penalty term P1
+  * \param p2_init			Input, penalty term P2_Init
+  * \param cost_init		Input, initial cost data
+  * \param cost_aggr		Output, cost aggregation data
+  * \param is_forward		Input, whether it is in the forward direction (forward direction is from top to bottom, reverse direction is from bottom to top)
+  */
 	void CostAggregateDagonal_2(const uint8* img_data, const sint32& width, const sint32& height, const sint32& min_disparity, const sint32& max_disparity,
 		const sint32& p1, const sint32& p2_init, const uint8* cost_init, uint8* cost_aggr, bool is_forward = true);
 
 
 	/**
-	 * \brief 中值滤波
-	 * \param in				输入，源数据
-	 * \param out				输出，目标数据
-	 * \param width				输入，宽度
-	 * \param height			输入，高度
-	 * \param wnd_size			输入，窗口宽度
-	 */
+  * \brief Median filter
+  * \param in				Input, source data
+  * \param out				Output, target data
+  * \param width			Input, width
+  * \param height			Input, height
+  * \param wnd_size			Input, window width
+  */
 	void MedianFilter(const float32* in, float32* out, const sint32& width, const sint32& height, const sint32 wnd_size);
 
 
 	/**
-	 * \brief 剔除小连通区
-	 * \param disparity_map		输入，视差图
-	 * \param width				输入，宽度
-	 * \param height			输入，高度
-	 * \param diff_insame		输入，同一连通区内的局部像素差异
-	 * \param min_speckle_aera	输入，最小连通区面积
-	 * \param invalid_val		输入，无效值
-	 */
+  * \brief Remove small speckle regions
+  * \param disparity_map		Input, disparity map
+  * \param width				Input, width
+  * \param height				Input, height
+  * \param diff_insame			Input, local pixel difference within the same region
+  * \param min_speckle_aera		Input, minimum speckle area
+  * \param invalid_val			Input, invalid value
+  */
 	void RemoveSpeckles(float32* disparity_map, const sint32& width, const sint32& height, const sint32& diff_insame, const uint32& min_speckle_aera, const float32& invalid_val);
 }

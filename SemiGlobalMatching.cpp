@@ -296,7 +296,6 @@ void SemiGlobalMatching::ComputeDisparity() const{
         return;
     }
 
-    // 未实现聚合步骤，暂用初始代价值来代替
     //auto cost_ptr = cost_init_;
     const auto cost_ptr = cost_aggr_;
 
@@ -350,16 +349,16 @@ void SemiGlobalMatching::ComputeDisparityRight() const {
 
     std::vector<uint16> cost_local(disp_range);
 
-    // ---逐像素计算最优视差
-    // 通过左影像的代价，获取右影像的代价
-    // 右cost(xr,yr,d) = 左cost(xr+d,yl,d)
+    // Calculate the optimal disparity for each pixel
+    // Get the cost for the right image from the cost of the left image
+    // Right cost(xr,yr,d) = Left cost(xr+d,yl,d)
     for (sint32 i = 0; i < height; i++) {
         for (sint32 j = 0; j < width; j++) {
             uint16 min_cost = UINT16_MAX;
             uint16 sec_min_cost = UINT16_MAX;
             sint32 best_disparity = 0;
 
-            // ---统计候选视差下的代价值
+            // ---Calculate the cost for candidate disparities
             for (sint32 d = min_disparity; d < max_disparity; d++) {
                 const sint32 d_idx = d - min_disparity;
                 const sint32 col_left = j + d;
@@ -376,43 +375,36 @@ void SemiGlobalMatching::ComputeDisparityRight() const {
             }
 
             if (is_check_unique) {
-                // 再遍历一次，输出次最小代价值
+                // Traverse again to get the second smallest cost
                 for (sint32 d = min_disparity; d < max_disparity; d++) {
                     if (d == best_disparity) {
-                        // 跳过最小代价值
+                        // Skip the minimum cost
                         continue;
                     }
                     const auto& cost = cost_local[d - min_disparity];
                     sec_min_cost = std::min(sec_min_cost, cost);
                 }
 
-                // 判断唯一性约束
-                // 若(min-sec)/min < min*(1-uniquness)，则为无效估计
+                // Check the uniqueness constraint
+                // If (min-sec)/min < min*(1-uniqueness), then it is an invalid estimate
                 if (sec_min_cost - min_cost <= static_cast<uint16>(min_cost * (1 - uniqueness))) {
                     disparity[i * width + j] = Invalid_Float;
                     continue;
                 }
             }
 
-            // ---子像素拟合
+            // ---Subpixel fitting
             if (best_disparity == min_disparity || best_disparity == max_disparity - 1) {
-
-                //if (disparity == nullptr) {
-                //    std::cerr << "Error: disparity pointer is null!" << std::endl;
-                //    return;
-                //}
-
-
                 disparity[i * width + j] = Invalid_Float;
                 continue;
             }
 
-            // 最优视差前一个视差的代价值cost_1，后一个视差的代价值cost_2
+            // Cost of the disparity before the optimal disparity cost_1, and the cost of the disparity after cost_2
             const sint32 idx_1 = best_disparity - 1 - min_disparity;
             const sint32 idx_2 = best_disparity + 1 - min_disparity;
             const uint16 cost_1 = cost_local[idx_1];
             const uint16 cost_2 = cost_local[idx_2];
-            // 解一元二次曲线极值
+            // Solve the quadratic curve extremum
             const uint16 denom = std::max(1, cost_1 + cost_2 - 2 * min_cost);
             disparity[i * width + j] = static_cast<float32>(best_disparity) + static_cast<float32>(cost_1 - cost_2) / (denom * 2.0f);
         }
@@ -425,37 +417,37 @@ void SemiGlobalMatching::LRCheck() {
 
     const float32& threshold = option_.lrcheck_thres;
 
-    // 遮挡区像素和误匹配区像素
+    // Occlusion pixels and mismatched pixels
     auto& occlusions = occlusions_;
     auto& mismatches = mismatches_;
     occlusions.clear();
     mismatches.clear();
 
-    // ---左右一致性检查
+    // ---Left-right consistency check
     for (sint32 i = 0; i < height; i++) {
         for (sint32 j = 0; j < width; j++) {
-            // 左影像视差值
+            // Disparity value of the left image
             auto& disp = disp_left_[i * width + j];
             if (disp == Invalid_Float) {
                 mismatches.emplace_back(i, j);
                 continue;
             }
 
-            // 根据视差值找到右影像上对应的同名像素
+            // Find the corresponding pixel in the right image based on the disparity value
             const auto col_right = static_cast<sint32>(j - disp + 0.5);
 
             if (col_right >= 0 && col_right < width) {
-                // 右影像上同名像素的视差值
+                // Disparity value of the corresponding pixel in the right image
                 const auto& disp_r = disp_right_[i * width + col_right];
 
-                // 判断两个视差值是否一致（差值在阈值内）
+                // Check if the two disparity values are consistent (difference within the threshold)
                 if (abs(disp - disp_r) > threshold) {
-                    // 区分遮挡区和误匹配区
-                    // 通过右影像视差算出在左影像的匹配像素，并获取视差disp_rl
-                    // if(disp_rl > disp) 
-                    //		pixel in occlusions
-                    // else 
-                    //		pixel in mismatches
+                    // Distinguish between occlusions and mismatches
+                    // Calculate the matching pixel in the left image using the right image disparity, and get the disparity disp_rl
+                    // if(disp_rl > disp)
+                    //     pixel in occlusions
+                    // else
+                    //     pixel in mismatches
                     const sint32 col_rl = static_cast<sint32>(col_right + disp_r + 0.5);
                     if (col_rl > 0 && col_rl < width) {
                         const auto& disp_l = disp_left_[i * width + col_rl];
@@ -470,12 +462,12 @@ void SemiGlobalMatching::LRCheck() {
                         mismatches.emplace_back(i, j);
                     }
 
-                    // 让视差值无效
+                    // Invalidate the disparity value
                     disp = Invalid_Float;
                 }
             }
             else {
-                // 通过视差值在右影像上找不到同名像素（超出影像范围）
+                // Cannot find the corresponding pixel in the right image using the disparity value (out of image range)
                 disp = Invalid_Float;
                 mismatches.emplace_back(i, j);
             }
@@ -490,7 +482,7 @@ void SemiGlobalMatching::FillHolesInDispMap()
 
     std::vector<float32> disp_collects;
 
-    // 定义8个方向
+    // Define 8 directions
     float32 pi = 3.1415926;
     float32 angle1[8] = { pi, 3 * pi / 4, pi / 2, pi / 4, 0, 7 * pi / 4, 3 * pi / 2, 5 * pi / 4 };
     float32 angle2[8] = { pi, 5 * pi / 4, 3 * pi / 2, 7 * pi / 4, 0, pi / 4, pi / 2, 3 * pi / 4 };
@@ -498,12 +490,12 @@ void SemiGlobalMatching::FillHolesInDispMap()
 
     float32* disp_ptr = disp_left_;
     for (int k = 0; k < 3; k++) {
-        // 第一次循环处理遮挡区，第二次循环处理误匹配区
+        // The first loop handles occlusions, the second loop handles mismatches
         auto& trg_pixels = (k == 0) ? occlusions_ : mismatches_;
 
         std::vector<std::pair<int, int>> inv_pixels;
         if (k == 2) {
-            //  第三次循环处理前两次没有处理干净的像素
+            // The third loop handles pixels that were not handled in the first two loops
             for (int i = 0; i < height; i++) {
                 for (int j = 0; j < width; j++) {
                     if (disp_ptr[i * width + j] == Invalid_Float) {
@@ -514,7 +506,7 @@ void SemiGlobalMatching::FillHolesInDispMap()
             trg_pixels = inv_pixels;
         }
 
-        // 遍历待处理像素
+        // Traverse the pixels to be processed
         for (auto& pix : trg_pixels) {
             int y = pix.first;
             int x = pix.second;
@@ -523,7 +515,7 @@ void SemiGlobalMatching::FillHolesInDispMap()
                 angle = angle2;
             }
 
-            // 收集8个方向上遇到的首个有效视差值
+            // Collect the first valid disparity value encountered in 8 directions
             disp_collects.clear();
             for (sint32 n = 0; n < 8; n++) {
                 const float32 ang = angle[n];
@@ -548,8 +540,8 @@ void SemiGlobalMatching::FillHolesInDispMap()
 
             std::sort(disp_collects.begin(), disp_collects.end());
 
-            // 如果是遮挡区，则选择第二小的视差值
-            // 如果是误匹配区，则选择中值
+            // If it is an occlusion, choose the second smallest disparity value
+            // If it is a mismatch, choose the median value
             if (k == 0) {
                 if (disp_collects.size() > 1) {
                     disp_ptr[y * width + x] = disp_collects[1];
@@ -564,6 +556,7 @@ void SemiGlobalMatching::FillHolesInDispMap()
         }
     }
 }
+
 
 
 /**
@@ -604,7 +597,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    // SGM匹配
+    // SGM Matching
     const uint32 width = static_cast<uint32>(img_left.cols);
     const uint32 height = static_cast<uint32>(img_right.rows);
 
